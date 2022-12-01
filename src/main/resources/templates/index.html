@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html xmlns: xmlns:th="http://www.w3.org/1999/xhtml" th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <!-- import CSS -->
+    <link rel="stylesheet" th:href="@{/css/globalStyle.css}"/>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/blueimp-md5/2.16.0/js/md5.js"></script>
+    <!-- 引入oss在线资源 -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.13.2.min.js"></script>
+</head>
+<body>
+<div id="app" class="main">
+    <el-menu class="align-right" mode="horizontal" :default-active="iframeSrc" @select="handleSelect">
+        <el-menu-item>
+            <a href="/page/index">
+                <img style="width: 120px; height: 40px;" th:src="@{/images/yunpinLogo.png}" alt="123">
+            </a>
+        </el-menu-item>
+        <el-menu-item index="/page/home">校园招聘首页</el-menu-item>
+        <el-menu-item index="/page/search">职位搜索</el-menu-item>
+        <!--        <el-menu-item index="/page/school_info">校园资讯</el-menu-item>-->
+        <!--        <el-menu-item index="/page/friend_link">资讯</el-menu-item>-->
+        <div v-if="logined">
+            <div style="float: right;margin-top: 10px">
+                <el-button type="text" @click="changeIframeSrc">
+                    <div v-if="userInfo.studentName == null && userInfo.companyName == null">{{userInfo.email}}</div>
+                    <div v-if="userInfo.companyName != null">{{userInfo.companyName}}</div>
+                    <div v-else>{{userInfo.studentName}}</div>
+                </el-button>
+                <el-button type="text" @click="logout" circle>退出</el-button>
+            </div>
+            <div style="float:right;">
+                <el-tooltip content="建议上传JPG或PNG格式1:1的图片" placement="left">
+                    <el-upload
+                            :http-request="httpRequest"
+                            :show-file-list="false"
+                            :before-upload="beforeAvatarUpload">
+                        <img :src="userInfo.portrait" height="40px" width="40px"
+                             style="margin-top: 7px;border:1px solid #09C; border-radius:100px; padding:1px;">
+                    </el-upload>
+                </el-tooltip>
+            </div>
+        </div>
+        <div v-else>
+            <el-button style=" margin-top: 10px" type="text" @click="dialogFormVisible = true">登录/注册</el-button>
+            <el-dialog :visible.sync="dialogFormVisible" width="25%">
+                <div class="align-center">
+                    <el-radio-group v-model="radio" @change="changIsLogin">
+                        <el-radio-button label="登录"></el-radio-button>
+                        <el-radio-button label="注册"></el-radio-button>
+                    </el-radio-group>
+                </div>
+                <div v-if="isLogin" style="margin-top: 50px">
+                    <el-form :model="form">
+                        <el-form-item label=" ">
+                            <el-input placeholder="请输入邮箱" prefix-icon="el-icon-message" v-model="form.email"
+                                      autocomplete="off" clearable></el-input>
+                        </el-form-item>
+                        <el-form-item label=" ">
+                            <el-input placeholder="请输入密码或验证码" prefix-icon="el-icon-lock"
+                                      v-model="form.loginPassword" show-password clearable>
+                                <el-button slot="append" icon="el-icon-s-promotion" :disabled="disable"
+                                           @click="sendEmaile">
+                                    <span v-if="disable">{{time}}</span>
+                                </el-button>
+                            </el-input>
+                        </el-form-item>
+                    </el-form>
+                </div>
+                <div v-else style="margin-top: 50px">
+                    <el-form :model="form">
+                        <el-form-item label=" ">
+                            <el-input placeholder="请输入邮箱" prefix-icon="el-icon-message" v-model="form.email"
+                                      autocomplete="off" clearable>
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item label="">
+                            <el-input placeholder="请输入验证码" v-model="form.phone" prefix-icon="el-icon-unlock"
+                                      clearable>
+                                <el-button slot="append" icon="el-icon-s-promotion" :disabled="disable"
+                                           @click="sendEmaile">
+                                    <span v-if="disable">{{time}}</span>
+                                </el-button>
+                            </el-input>
+                        </el-form-item>
+                        <el-form-item label=" ">
+                            <el-input placeholder="请输入密码" prefix-icon="el-icon-lock" minlength="6" maxlength="12"
+                                      v-model="form.loginPassword" show-password clearable>
+                            </el-input>
+                        </el-form-item>
+                    </el-form>
+                </div>
+                <el-switch
+                        style="display: block;text-align: center"
+                        v-model="isStudent"
+                        active-color="#13ce66"
+                        inactive-color="#ff4949"
+                        active-text="学生"
+                        inactive-text="企业">
+                </el-switch>
+                <div slot="footer" class="align-center">
+                    <el-button type="primary" @click="submit" round>确 定</el-button>
+                </div>
+            </el-dialog>
+        </div>
+    </el-menu>
+    <!--height="90%"-->
+    <iframe id="iframe" height="650px" width="100%" frameborder="0" :src="iframeSrc" scrolling="no"></iframe>
+    <el-divider></el-divider>
+    <div style="font-size: 12px">
+        <img style="width: 55px; height: 50px;margin-bottom: 5px ;float: right" th:src="@{/images/logo.png}" alt="123">
+        <div style="text-align: center;">
+            <div style="text-align: left;margin-right: 15%;float: right">
+                友情链接:<br>
+                智联招聘：<a target="_blank" href="https://landing.zhaopin.com/">https://landing.zhaopin.com/</a><br>
+                前程无忧：<a target="_blank" href="https://www.51job.com/">https://www.51job.com/</a><br>
+                boss直聘：<a target="_blank" href="https://www.zhipin.com/">https://www.zhipin.com/</a>
+            </div>
+        </div>
+    </div>
+    <script>
+        new Vue({
+            el: '#app',
+            data: {
+                dialogFormVisible: false,
+                radio: '登录',
+                isLogin: true,
+                form: {
+                    email: '2644293073@qq.com',
+                    loginPassword: 'aaaa1111',
+                    //VerificationCode-->phone
+                    phone: ''
+                },
+                isStudent: true,
+                logined: sessionStorage.getItem("logined"),
+                userInfo: JSON.parse(sessionStorage.getItem("userInfo")),
+                iframeSrc: sessionStorage.getItem("iframeSrc"),
+                disable: false,
+                time: 60
+            },
+            mounted: function () {
+                this.createcode();//需要触发的函数
+            },
+            methods: {
+                //方法里调用另一个方法
+                //this.$options.methods.changIsLogin();
+                //TODO 登录/注册
+                changIsLogin() {
+                    this.isLogin = !this.isLogin;
+                },
+                //TODO 发邮件
+                sendEmaile() {
+                    let email = this.form.email;
+                    const reg = /^([a-zA-Z0-9]+[-_.]?)+@[a-zA-Z0-9]+.[a-z]+$/;
+                    if (email == null || email == '') {
+                        this.$message.error('邮箱不能为空!');
+                    } else {
+                        if (!reg.test(email)) {
+                            this.$message.error('请输入正确的邮箱!');
+                        } else {
+                            axios.post('/email/getverificationcode/' + email).then(response => {
+                                if (response.data) {
+                                    this.$message({
+                                        message: '验证码发送成功！',
+                                        type: 'success'
+                                    });
+                                    let num = setInterval(() => {
+                                        this.disable = true
+                                        this.time -= 1
+                                        if (this.time < 1) {
+                                            clearInterval(num)
+                                            if (this.time < 1) {
+                                                this.disable = false
+                                                this.time = 60
+                                            }
+                                        }
+                                    }, 1000)
+                                } else {
+                                    this.$message.error('验证码发送失败!');
+                                }
+                            });
+                        }
+                    }
+                },
+                //TODO 提交
+                submit() {
+                    _this = this;
+                    email = this.form.email;
+                    const reg = /^([a-zA-Z0-9]+[-_.]?)+@[a-zA-Z0-9]+.[a-z]+$/;
+                    // //邮箱不能为空
+                    if (email == null || email == undefined || email == '') {
+                        this.$message.error('邮箱不能为空!');
+                    } else {
+                        //邮箱格式
+                        if (!reg.test(email)) {
+                            this.$message.error('请输入正确的邮箱!');
+                        } else {
+                            //判断密码不能为空
+                            let loginPassword = this.form.loginPassword;
+                            if (loginPassword == '' || loginPassword == null) {
+                                this.$message.error('密码不能为空');
+                            } else {
+                                if (this.isLogin) {
+
+                                    this.form.loginPassword = loginPassword;
+                                    //TODO 登录
+                                    if (this.isStudent) {
+                                        //TODO 学上登录
+                                        axios.post('/student/login', this.form).then(response => {
+                                            this.$options.methods.result(response.data, _this);
+                                        })
+                                    } else {
+                                        //TODO 企业登录
+                                        axios.post('/company/login', this.form).then(response => {
+                                            this.$options.methods.result(response.data, _this);
+                                        })
+                                    }
+                                } else {
+                                    let loginPasswordReg = /^(?![0-9]+$)(?![a-zA-Z]+$)[0-9A-Za-z]{8,16}$/;
+                                    if (!loginPasswordReg.test(loginPassword)) {
+                                        this.$message.error('密码必须包含字母、数字且长度在8-16!');
+                                    } else {
+                                        //MD5加密
+                                        this.form.loginPassword = loginPassword;
+                                        verificationCode = this.form.phone;
+                                        if (verificationCode == null || verificationCode == undefined || verificationCode == '') {
+                                            this.$message.error('验证码不能为空!');
+                                        } else {
+                                            //MD5加密
+                                            this.form.phone = verificationCode;
+                                            //TODO 注册
+                                            if (this.isStudent) {
+                                                //TODO 学生注册
+                                                axios.post('/student/register', this.form).then(response => {
+                                                    this.$options.methods.result(response.data, _this);
+                                                })
+                                            } else {
+                                                //TODO 企业注册
+                                                axios.post('/company/register', this.form).then(response => {
+                                                    this.$options.methods.result(response.data, _this);
+                                                })
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    this.form.loginPassword = '';
+                    this.form.phone = '';
+                },
+                //TODO 结果
+                result(responseData, _this) {
+                    if (responseData.code == 200) {
+                        _this.dialogFormVisible = false;
+                        _this.$message({
+                            message: responseData.msg,
+                            type: 'success'
+                        });
+                        _this.logined = true;
+                        _this.userInfo = responseData.data;
+                        sessionStorage.setItem('logined', _this.logined);
+                        sessionStorage.setItem("userInfo", JSON.stringify(_this.userInfo));
+                        if (_this.userInfo.sex === undefined) {
+                            //公司
+                            _this.iframeSrc = '/page/company';
+                        } else {
+                            //学生
+                            _this.iframeSrc = '/page/student';
+                        }
+                        sessionStorage.setItem('iframeSrc', _this.iframeSrc);
+                    } else {
+                        _this.$message.error(responseData.msg);
+                    }
+                },
+                //TODO 退出
+                logout() {
+                    let requestUrl = '';
+                    // ===同类型NaN
+                    if (this.userInfo.sex === undefined) {
+                        requestUrl = '/company/logout/';
+                    } else {
+                        requestUrl = '/student/logout/';
+                    }
+                    axios.post(requestUrl + this.userInfo.email).then(response => {
+                        if (response.data.code == 200) {
+                            this.$message({
+                                message: response.data.msg,
+                                type: 'success'
+                            });
+                            this.logined = false;
+                            this.userInfo = null;
+                            /*sessionStorage.setItem('logined',this.logined);
+                            sessionStorage.setItem("userInfo", JSON.stringify(this.userInfo));*/
+                            this.iframeSrc = '/page/home';
+                        } else {
+                            //this.$message.error('退出异常!');
+                        }
+                        sessionStorage.clear();
+                        window.location.replace('/');
+                    });
+                },
+                //TODO 页面路由
+                handleSelect(index) {
+                    this.iframeSrc = index;
+                    sessionStorage.setItem('iframeSrc', this.iframeSrc);
+                },
+                changeIframeSrc() {
+                    console.log(this.userInfo);
+                    if (this.userInfo.sex === undefined) {
+                        //公司
+                        this.iframeSrc = '/page/company';
+                    } else {
+                        //学生
+                        this.iframeSrc = '/page/student';
+                    }
+                    sessionStorage.setItem('iframeSrc', this.iframeSrc);
+                },
+                createcode() {
+                    if (this.iframeSrc == '' || this.iframeSrc == null) {
+                        this.iframeSrc = '/page/home';
+                    }
+                    if (this.userInfo.id != undefined) {
+                        if (this.userInfo.sex === undefined) {
+                            //公司
+                            axios.post('company/showCompanyById/' + this.userInfo.id).then(response => {
+                                this.userInfo = response.data.data;
+                                sessionStorage.setItem("userInfo", JSON.stringify(this.userInfo));
+                            })
+                        } else {
+                            //学生
+                            //this.iframeSrc='/page/student';
+                        }
+                    }
+                },
+                Uuid() {
+                    var s = [];
+                    var hexDigits = '0123456789abcdef';
+                    for (var i = 0; i < 36; i++) {
+                        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+                    }
+                    s[14] = '4';
+                    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);
+                    s[8] = s[13] = s[18] = s[23] = '-';
+
+                    this.uuidA = s.join('');
+                    return this.uuidA;
+                },
+                httpRequest(file) {
+                    let data = new FormData();
+                    data.append("file", file.file)
+                    axios.post("/oss/getToken", data).then((response) => {
+                        let uuid = this.$options.methods.Uuid();
+                        let OssConfing = response.data;
+                        let client = new OSS({
+                            // yourRegion填写Bucket所在地域。以华东1（杭州）为例，Region填写为oss-cn-hangzhou。
+                            region: OssConfing.region,
+                            // 从STS服务获取的临时访问凭证。临时访问凭证包括临时访问密钥（AccessKeyId和AccessKeySecret）和安全令牌（SecurityToken）。
+                            accessKeyId: OssConfing.accessKeyId,
+                            accessKeySecret: OssConfing.accessKeySecret,
+                            stsToken: OssConfing.stsToken,
+                            // 填写Bucket名称。
+                            bucket: OssConfing.bucket
+                        });
+                        client.put(uuid + ".png", file.file);
+                        this.userInfo.portrait = OssConfing.url;
+                        let requestUrl = '';
+                        // ===同类型NaN
+                        if (this.userInfo.sex === undefined) {
+                            requestUrl = '/company/update';
+                        } else {
+                            requestUrl = '/student/update';
+                        }
+                        axios.post(requestUrl, this.userInfo).then((response) => {
+                            if (response.data.code == 200) {
+                                this.dialogFormUpload = false;
+                                this.$message({
+                                    message: "更新成功",
+                                    type: 'success'
+                                });
+                                this.userInfo = response.data.data;
+                                sessionStorage.setItem("userInfo", JSON.stringify(this.userInfo));
+                            } else {
+                                this.$message.error("更新失败");
+                            }
+                            window.location.replace('/');
+                            //location.reload();
+                        });
+                    });
+                },
+                beforeAvatarUpload(file) {
+                    const isJPG = file.type === 'image/jpeg' || file.type === 'image/png';
+                    const isLt2M = file.size / 1024 / 1024 < 2;
+                    if (!isJPG) {
+                        this.$message.error('上传头像图片只能是 JPG或PNG 格式!');
+                    }
+                    if (!isLt2M) {
+                        this.$message.error('上传头像图片大小不能超过 2MB!');
+                    }
+                    return isJPG && isLt2M;
+                },
+            }
+        })
+    </script>
+</div>
+</body>
+</html>

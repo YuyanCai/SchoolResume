@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>admin</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/blueimp-md5/2.16.0/js/md5.js"></script>
+</head>
+<body>
+<div id="app">
+    <div style="background-color: whitesmoke;width: 100%;text-align: left">
+        <el-image
+                style="width: 50px; height: 30px;padding-top: 3px"
+                src="/images/logo.png">
+        </el-image>
+        <span style="vertical-align: 5px;font-size: 30px;font-family: FZShuTi;color: dodgerblue">校园招聘后台管理系统</span>
+        <div style="height: 30px;margin-bottom: 8px;float: right;font-size: 14px">
+            <div v-if="logined">
+                欢迎：{{userInfo.account}}
+                <el-button  type="text"  @click="logout" circle>退出</el-button>
+            </div>
+            <div v-else>
+                <el-button type="text" @click="dialogFormVisible = true" style="margin-right: 30px">登录</el-button>
+            </div>
+            <el-dialog :visible.sync="dialogFormVisible" width="25%" title="登录">
+                <el-form :model="userInfo" >
+                    <el-form-item label=" ">
+                        <el-input placeholder="请输入账号" prefix-icon="el-icon-message" v-model="userInfo.account" clearable></el-input>
+                    </el-form-item>
+                    <el-form-item label=" " >
+                        <el-input placeholder="请输入密码" prefix-icon="el-icon-lock" @change="submit" v-model="userInfo.apassword" show-password clearable></el-input>
+                    </el-form-item>
+                </el-form>
+                <div slot="footer" style="text-align: center">
+                    <el-button type="primary" @click="submit" round>登录</el-button>
+                </div>
+            </el-dialog>
+        </div>
+    </div>
+    <div v-if="logined">
+        <el-row >
+            <el-col :span="3">
+                <el-menu :default-active="iframeSrc" @select="handleSelect">
+                    <el-menu-item index="/page/admin_company">
+                        <i class="el-icon-set-up"></i>
+                        <span slot="title">企业管理</span>
+                    </el-menu-item>
+                    <el-menu-item index="/page/admin_data">
+                        <i class="el-icon-data-analysis"></i>
+                        <span slot="title">数据统计</span>
+                    </el-menu-item>
+                </el-menu>
+            </el-col>
+            <el-col :span="21" style="height: 550px">
+                <iframe width="100%" height="100%" frameborder="0" :src="iframeSrc" scrolling="no"></iframe>
+            </el-col>
+        </el-row>
+    </div>
+    <script>
+        new Vue({
+            el:"#app",
+            data:{
+                logined: sessionStorage.getItem("logined"),
+                dialogFormVisible:false,
+                userInfo: JSON.parse(sessionStorage.getItem("userInfo")),
+                iframeSrc:'/page/admin_company',
+                userInfo:{
+                    id:'',
+                    account:'ltf',
+                    apassword:''
+                }
+            },
+            mounted:function(){
+                this.createcode();//需要触发的函数
+            },
+            methods:{
+                createcode(){},
+                handleSelect(index){
+                    this.iframeSrc=index;
+                },
+                submit(){
+                    this.userInfo.apassword = this.userInfo.apassword;
+                    console.log(this.userInfo)
+                    axios.post("/admin/login",this.userInfo).then(response=>{
+                        if(response.data.code==200){
+                            this.$message({
+                                message: response.data.msg,
+                                type: 'success'
+                            });
+                            this.dialogFormVisible=false;
+                            this.logined=true;
+                            this.userInfo = response.data.data;
+                            sessionStorage.setItem('logined',this.logined);
+                            sessionStorage.setItem("userInfo", JSON.stringify(this.userInfo));
+                        }else{
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                },
+                logout(){
+                    console.log(this.userInfo)
+                    axios.post("/admin/logout/"+this.userInfo.id).then(response=>{
+                        if (response.data.code==200){
+                            this.$message({
+                                message: response.data.msg,
+                                type: 'success'
+                            });
+                            this.logined=false;
+                        }else{
+                            //this.$message.error(response.data.msg);
+                        }
+                    });
+                    sessionStorage.clear();
+                    location.reload();
+                    //window.location.replace('/');
+                }
+            }
+        });
+    </script>
+</div>
+</body>
+</html>

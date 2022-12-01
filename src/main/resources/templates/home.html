@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en" xmlns: xmlns:th="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="UTF-8">
+    <title>home</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="/css/globalStyle.css"/>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <style>
+
+    </style>
+</head>
+<body>
+<div id="app">
+    <el-carousel :interval="5000" type="card" height="190px">
+        <el-carousel-item v-for="image in imagesUrl" >
+            <el-image
+                    style="width: 100%; height: 100%;"
+                    :src="image">
+            </el-image>
+        </el-carousel-item>
+    </el-carousel>
+    <el-row :gutter="30">
+        <el-col :span="4" v-for="list in Lists">
+            <el-card shadow="hover" style="margin-bottom: 30px;text-align: center">
+                <img width="100px" height="100px" :src="list.portrait">
+                <div>
+                    <div>
+                        <el-tooltip :content="list.jobName" placement="top">
+                            <el-button type="text" @click="showJCom(list)">{{list.place}}</el-button>
+                        </el-tooltip>
+                    </div>
+                    <div>
+                        <el-tooltip placement="bottom">
+                            <div slot="content">投递{{list.education}}次</div>
+                            <span style="font-size: 12px;float: left">
+                                <i class="el-icon-position"></i>{{list.education}}
+                            </span>
+                        </el-tooltip>
+                        <el-tooltip placement="bottom">
+                            <div slot="content">薪资：{{list.salary}}</div>
+                            <span style="font-size: 12px;float: right">
+                                <i class="el-icon-coin"></i>{{list.salary}}
+                            </span>
+                        </el-tooltip>
+                    </div>
+                </div>
+            </el-card>
+        </el-col>
+    </el-row>
+    <script>
+        new Vue({
+            el: '#app',
+            data:{
+                imagesUrl:["/images/hot1.png","/images/hot2.jpg","/images/hot3.jpg","/images/hot4.jpg","/images/hot5.jpg","/images/hot6.jpg"],
+                Lists:[]
+            },
+            mounted:function(){
+                axios.post('/job-resume/indexData').then(response=>{
+                    this.Lists= response.data.data;
+                });
+            },
+            methods:{
+                showJCom(row){
+                    sessionStorage.setItem("search", JSON.stringify(row));
+                    location.href='/page/job';
+                },
+            }
+        })
+    </script>
+</div>
+</body>
+</html>

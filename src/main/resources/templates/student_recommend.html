@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>student_send</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <el-form >
+        <el-row>
+            <el-col :span="6">
+                <el-form-item label="状态">
+                    <el-select v-model="selectStatus" placeholder="请选择" style="width: 150px" @change="createcode">
+                        <el-option value="不限" ></el-option>
+                        <el-option value="未邀请" ></el-option>
+                        <el-option value="已邀请" ></el-option>
+                    </el-select>
+                </el-form-item>
+            </el-col>
+            <el-col :span="18">
+                <el-form-item label="">
+                    <el-input placeholder="请输入公司名称" v-model="companyName" @change="createcode">
+                        <el-button slot="append" icon="el-icon-search"  @click="createcode"></el-button>
+                    </el-input>
+                </el-form-item>
+            </el-col>
+        </el-row>
+    </el-form>
+    <el-table
+            size="medium"
+            :data="List"
+            style="width: 100%">
+        <el-table-column
+                prop="companyName"
+                label="公司名称" width="300">
+            <template slot-scope="scope">
+                <el-row>
+                    <el-col :span="5">
+                        <img  :src="scope.row.portrait" height="50px" width="50px" style="border-radius:5px;">
+                    </el-col>
+                    <el-col :span="19" style="margin-top: 9px">
+                        <el-tooltip v-if="scope.row.checkStatus=='已禁用'" content="该公司的账号已被禁用" placement="top">
+                            <span>{{scope.row.companyName}}</span>
+                        </el-tooltip>
+                        <el-button v-else type="text" @click.native.prevent="showJob(scope.row)">{{scope.row.companyName}}</el-button>
+                    </el-col>
+                </el-row>
+            </template>
+        </el-table-column>
+        <el-table-column
+                prop="jobName"
+                label="岗位名称"
+                width="200">
+            <template slot-scope="scope">
+                <el-tooltip v-if="scope.row.recruitmentStatus=='停止招聘'" content="该岗位已经停止招聘" placement="top">
+                    <span>{{scope.row.jobName}}</span>
+                </el-tooltip>
+                <el-button v-else type="text" @click.native.prevent="showJob(scope.row)">{{scope.row.jobName}}</el-button>
+            </template>
+        </el-table-column>
+        <el-table-column
+                prop="majors"
+                label="招聘专业"
+                width="200">
+        </el-table-column>
+        <el-table-column
+                prop="lable"
+                label="标签">
+            <template slot-scope="scope">
+                <el-tooltip v-if="scope.row.lable=='已邀请'" :content="scope.row.tip"  placement="bottom" effect="light">
+                    <el-button type="text">
+                        {{scope.row.lable}}
+                    </el-button>
+                </el-tooltip>
+                <el-button v-else type="text" disabled>
+                    {{scope.row.lable}}
+                </el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+    <div style="text-align: center;margin-top: 10px">
+        <el-pagination
+                style="text-align: center;"
+                background
+                layout="total,prev, pager, next,jumper"
+                :total="total"
+                page-size="6"
+                @prev-click="prevClick"
+                @next-click="nextClick"
+                @current-change="currentChange" >
+        </el-pagination>
+    </div>
+    <script>
+        new Vue({
+            el:"#app",
+            data:{
+                List:[],
+                userInfo:JSON.parse(sessionStorage.getItem("userInfo")),
+                selectStatus:'',
+                companyName:'',
+                crrPage:1,
+                total:0
+            },
+            mounted:function(){
+                this.createcode();//需要触发的函数
+            },
+            methods:{
+                createcode(){
+                    let find_companyName= '';
+                    let find_status= '';
+                    if(this.companyName==''||this.companyName=='不限'){find_companyName='null';}else{find_companyName=this.companyName;}
+                    if(this.selectStatus==''||this.selectStatus=='不限'){find_status='null';}else{find_status=this.selectStatus;}
+                    axios.post('/invitation/recommendJob/1/'+find_companyName+'/'+find_status).then(response=>{
+                        if (response.data.code==200){
+                            this.List=response.data.data;
+                            this.total=parseInt(response.data.msg);
+                        }else{
+                            this.List=[];
+                            this.total=0;
+                            this.$message.error(response.data.msg);
+                        }
+                    });
+                },
+                showJob(row){
+                    sessionStorage.setItem("search", JSON.stringify(row));
+                    location.href='/page/job';
+                },
+                prevClick(page){
+                    this.crrPage=page;
+                    this.$options.methods.page(this);
+                },
+                nextClick(page){
+                    this.crrPage=page;
+                    this.$options.methods.page(this);
+                },
+                currentChange(page){
+                    this.crrPage=page;
+                    this.$options.methods.page(this);
+                },
+                page(_this){
+                    let find_companyName= '';
+                    let find_status= '';
+                    if(_this.companyName==''||_this.companyName=='不限'){find_companyName='null';}else{find_companyName=_this.companyName;}
+                    if(_this.selectStatus==''||_this.selectStatus=='不限'){find_status='null';}else{find_status=_this.selectStatus;}
+                    axios.post('/invitation/recommendJob/'+_this.crrPage+'/'+find_companyName+'/'+find_status).then(response=>{
+                        if (response.data.code==200){
+                            _this.List=response.data.data;
+                            _this.total=parseInt(response.data.msg);
+                        }else{
+                            _this.List=[];
+                            _this.total=0;
+                            _this.$message.error(response.data.msg);
+                        }
+                    });
+                },
+                showJCom(row){
+                    sessionStorage.setItem("search", JSON.stringify(row));
+                    location.href='/page/com';
+                },
+            }
+        })
+    </script>
+</div>
+</body>
+</html>

@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>student_send</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- 引入 echarts.js -->
+    <script src="https://cdn.staticfile.org/echarts/4.3.0/echarts.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <!-- 为ECharts准备一个具备大小（宽高）的Dom -->
+    <div id="companyJobDataBar" style="height:350px;"></div>
+
+    <div id="main" style="width: 65%;height:300px;float: left"></div>
+    <div id="ping" style="width: 35%;height:300px;float: right"></div>
+    <script>
+        new Vue({
+            el:"#app",
+            data:{
+                userInfo: JSON.parse(sessionStorage.getItem("userInfo")),
+                checkStatus:false,
+            },
+            mounted:function(){
+                this.createcode();//需要触发的函数
+            },
+            methods:{
+                createcode(){
+                    // 基于准备好的dom，初始化echarts实例
+                    let companyJobDataBar = echarts.init(document.getElementById('companyJobDataBar'));
+                    axios.post("/job-resume/companyDataBar",this.userInfo).then((response)=>{
+                        if(response.data.code==200){
+                            // 使用刚指定的配置项和数据显示图表。
+                            companyJobDataBar.setOption({
+                                title: {
+                                    text: '各岗位的投递次数'
+                                },
+                                tooltip: {trigger: 'item'},
+                                legend: {
+                                    data:['投递次数']
+                                },
+                                xAxis: {
+                                    data: response.data.data.x
+                                },
+                                yAxis: {},
+                                series: [
+                                    {
+                                        name: '投递次数',
+                                        type: 'bar',
+                                        data: response.data.data.y
+                                    }
+                                ]
+                            });
+                        }
+                    });
+
+                    let main = echarts.init(document.getElementById('main'));
+                    axios.post("/job-resume/companyData",this.userInfo).then((response)=>{
+                        if(response.data.code==200){
+                            // 使用刚指定的配置项和数据显示图表。
+                            main.setOption({
+                                title: {
+                                    text: '最近7日投递次数'
+                                },
+                                tooltip: {trigger: 'item'},
+                                legend: {
+                                    data:['投递次数']
+                                },
+                                xAxis: {
+                                    data: response.data.data.x
+                                },
+                                yAxis: {},
+                                series: [
+                                    {
+                                        name: '投递次数',
+                                        type: 'bar',
+                                        data: response.data.data.y
+                                    }
+                                ]
+                            });
+                        }
+                    });
+
+                    var myChartPing = echarts.init(document.getElementById('ping'));
+                    axios.post("/job-resume/companyDataPing",this.userInfo).then((response)=>{
+                        if(response.data.code==200){
+                            myChartPing.setOption({
+                                title: {
+                                    text: '投递状态比例',
+                                    left: 'center'
+                                },
+                                tooltip: {trigger: 'item'},
+                                series : [
+                                    {
+                                        name: '投递状态比例',
+                                        type: 'pie',    // 设置图表类型为饼图
+                                        //radius: '55%',  // 饼图的半径，外半径为可视区尺寸（容器高宽中较小一项）的 55% 长度。
+                                        data:response.data.data,
+                                        radius: ['40%', '70%']
+                                    }
+                                ]
+                            })
+                        }
+                    });
+                },
+            }
+        })
+    </script>
+</div>
+</body>
+</html>

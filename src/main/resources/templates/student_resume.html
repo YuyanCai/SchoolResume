@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>student_resume</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/blueimp-md5/2.16.0/js/md5.js"></script>
+    <!-- 引入oss在线资源 -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.13.2.min.js"></script>
+    <!-- 引入 echarts.js -->
+    <!--<script src="https://cdn.staticfile.org/echarts/4.3.0/echarts.min.js"></script>-->
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.1.0/dist/echarts.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <el-card class="box-card">
+        <div slot="header" >
+            <span>简历列表</span>
+            <el-button style="float: right; padding: 3px 0" type="text" @click="dialogFormResume = true">添加简历</el-button>
+            <el-dialog title="编辑简历" :visible.sync="dialogFormResume" width="50%" @close="closeDialog" destroy-on-close="true">
+                <div style="margin-left: 60px">
+                    <el-form >
+                        <el-row>
+                            <el-form-item label="简历名称">
+                                <el-input v-model="resumeDTO.resumeName" placeholder="例如：姓名+求职意向"style="width: 180px"></el-input>
+                            </el-form-item>
+                        </el-row>
+                        <!--<el-row>
+                            <el-form-item label="求职意向">
+                                <el-input v-model="resumeDTO.intention" style="width: 180px" ></el-input>
+                            </el-form-item>
+                        </el-row>-->
+                        <el-row>
+                            <el-upload :http-request="httpRequest"
+                                       multiple="false"
+                                       limit="1">
+                                <el-button size="small" type="primary">上传简历</el-button>
+                                <div slot="tip" class="el-upload__tip">只能上传pdf格式的文件</div>
+                            </el-upload>
+                        </el-row>
+                    </el-form>
+                </div>
+            </el-dialog>
+        </div>
+        <div class="text item">
+            <el-table
+                    :data="resumeList"
+                    style="width: 100%">
+                <el-table-column
+                        prop="resumeName"
+                        label="简历名称">
+                </el-table-column>
+                <!--<el-table-column
+                        prop="intention"
+                        label="求职意向"
+                        width="180">
+                </el-table-column>-->
+                <el-table-column
+                        prop="updateTime"
+                        label="更新时间">
+                </el-table-column>
+                <el-table-column
+                        label="附件链接">
+                    <template slot-scope="scope">
+                        <el-link :href="scope.row.attachment" type="success" target="_blank">查看</el-link>
+                    </template>
+                </el-table-column>
+                <el-table-column
+                        label="操作">
+                    <template slot-scope="scope">
+                        <el-tooltip content="之前投递的企业只能查看最新的简历" placement="left">
+                            <el-button
+                                    @click.native.prevent="updateRow(scope.row)"
+                                    type="text">
+                                修改
+                            </el-button>
+                        </el-tooltip>
+                         |
+                        <el-popconfirm title="如果删除该简历则其投递记录也会被删除，确定要删除？" @confirm="deleteRow(scope.row)">
+                            <el-button
+                                    slot="reference"
+                                    type="text">
+                                删除
+                            </el-button>
+                        </el-popconfirm>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </div>
+    </el-card>
+    <div id="main" style="width: 100%;height:300px;float: left"></div>
+    <script>
+        new Vue({
+            el:'#app',
+            data:{
+                userInfo: JSON.parse(sessionStorage.getItem("userInfo")),
+                resumeDTO:{
+                    id:'',
+                    resumeName:'',
+                    intention:'',
+                    studentId:'',
+                    selfEvaluation:'',
+                    updateTime:'',
+                    attachment:''
+                },
+                resumeList:[],
+                dialogFormResume:false
+            },
+            mounted:function(){
+                this.createCode();//需要触发的函数
+            },
+            methods:{
+                Uuid() {
+                    var s = [];
+                    var hexDigits = '0123456789abcdef';
+                    for (var i = 0; i < 36; i++) {
+                        s[i] = hexDigits.substr(Math.floor(Math.random() * 0x10), 1);
+                    }
+                    s[14] = '4';
+                    s[19] = hexDigits.substr((s[19] & 0x3) | 0x8, 1);
+                    s[8] = s[13] = s[18] = s[23] = '-';
+
+                    this.uuidA = s.join('');
+                    console.log(s.join(''), 's.join("")');
+                    return this.uuidA;
+                },
+                httpRequest(file){
+                    let fileName = file.file.name;
+                    let index =fileName.lastIndexOf('.');
+                    fileName=fileName.substring(index+1,fileName.length);
+                    if(!(fileName=='pdf'||fileName=='PDF')){
+                        this.$message.error("只支持pdf文档");
+                        return;
+                    }
+                    let data = new FormData();
+                    data.append("file",file.file)
+                    if(this.resumeDTO.resumeName!=''){
+                        axios.post("/oss/getToken",data).then((response)=>{
+                            let uuid = this.$options.methods.Uuid();
+                            let OssConfing=  response.data;
+                            let client = new OSS({
+                                // yourRegion填写Bucket所在地域。以华东1（杭州）为例，Region填写为oss-cn-hangzhou。
+                                region: OssConfing.region,
+                                // 从STS服务获取的临时访问凭证。临时访问凭证包括临时访问密钥（AccessKeyId和AccessKeySecret）和安全令牌（SecurityToken）。
+                                accessKeyId: OssConfing.accessKeyId,
+                                accessKeySecret: OssConfing.accessKeySecret,
+                                stsToken: OssConfing.stsToken,
+                                // 填写Bucket名称。
+                                bucket: OssConfing.bucket
+                            });
+                            client.put(uuid+".pdf",file.file);
+                            this.resumeDTO.attachment = OssConfing.url;
+                            this.resumeDTO.studentId = this.userInfo.id;
+                            axios.post("/resume/add",this.resumeDTO).then((response)=>{
+                                if (response.data.code==200){
+                                    this.$message({
+                                        message: response.data.msg,
+                                        type: 'success'
+                                    });
+                                    this.resumeList=response.data.data;
+                                    this.dialogFormResume=false;
+                                }else{
+                                    this.$message.error(response.data.msg);
+                                }
+                            });
+                        });
+                    }else{
+                        this.$message.error("简历名称不能为空！");
+                    }
+                },
+                deleteRow(rows) {
+                    console.log(rows)
+                    axios.post("/resume/deleteBuyId",rows).then((response)=>{
+                        if (response.data.code==200){
+                            this.resumeList = response.data.data;
+                            this.$message({
+                                message: response.data.msg,
+                                type: 'success'
+                            });
+                        }else{
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                },
+                createCode(){
+                    this.userInfo =JSON.parse(sessionStorage.getItem("userInfo"));
+                    axios.post("/resume/listByStudentId/"+this.userInfo.id).then((response)=>{
+                        if (response.data.code==200){
+                            this.resumeList = response.data.data;
+                        }
+                    });
+                    let main = echarts.init(document.getElementById('main'));
+                    axios.post("/job-resume/studentResumeBar",this.userInfo).then((response)=>{
+                        // 使用刚指定的配置项和数据显示图表。
+                        main.setOption({
+                            tooltip: {
+                                trigger: 'axis',
+                                axisPointer: {            // Use axis to trigger tooltip
+                                    type: 'shadow'        // 'shadow' as default; can also be 'line' or 'shadow'
+                                }
+                            },
+                            legend: {
+                                data: ['未查阅', '已查阅', '已回复', '人才库']
+                            },
+                            grid: {
+                                left: '3%',
+                                right: '4%',
+                                bottom: '3%',
+                                containLabel: true
+                            },
+                            xAxis: {
+                                type: 'value'
+                            },
+                            yAxis: {
+                                type: 'category',
+                                data: response.data.data.x
+                            },
+                            series: [
+                                {
+                                    name: '未查阅',
+                                    type: 'bar',
+                                    stack: 'total',
+                                    label: {
+                                        show: true
+                                    },
+                                    emphasis: {
+                                        focus: 'series'
+                                    },
+                                    data: response.data.data.xy[0]
+                                },
+                                {
+                                    name: '已查阅',
+                                    type: 'bar',
+                                    stack: 'total',
+                                    label: {
+                                        show: true
+                                    },
+                                    emphasis: {
+                                        focus: 'series'
+                                    },
+                                    data: response.data.data.xy[1]
+                                },
+                                {
+                                    name: '已回复',
+                                    type: 'bar',
+                                    stack: 'total',
+                                    label: {
+                                        show: true
+                                    },
+                                    emphasis: {
+                                        focus: 'series'
+                                    },
+                                    data: response.data.data.xy[2]
+                                },
+                                {
+                                    name: '人才库',
+                                    type: 'bar',
+                                    stack: 'total',
+                                    label: {
+                                        show: true
+                                    },
+                                    emphasis: {
+                                        focus: 'series'
+                                    },
+                                    data: response.data.data.xy[3]
+                                }
+                            ]
+                        });
+                    });
+                },
+                updateRow(row){
+                    let resume = {};
+                    resume =row;
+                    this.resumeDTO =resume;
+                    this.dialogFormResume=true;
+                },
+                closeDialog(){
+                    this.userInfo =JSON.parse(sessionStorage.getItem("userInfo"))
+                    axios.post("/resume/listByStudentId/"+this.userInfo.id).then((response)=>{
+                        if (response.data.code==200){
+                            this.resumeList = response.data.data;
+                        }
+                    });
+                    this.resumeDTO.id='';
+                    this.resumeDTO.resumeName='';
+                    this.resumeDTO.intention='';
+                    this.resumeDTO.studentId='';
+                    this.resumeDTO.selfEvaluation='';
+                    this.resumeDTO.updateTime='';
+                    this.resumeDTO.attachment='';
+                },
+            }
+        })
+    </script>
+</div>
+</body>
+</html>

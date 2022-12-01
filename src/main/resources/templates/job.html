@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>student_send</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/blueimp-md5/2.16.0/js/md5.js"></script>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20">
+        <el-col :span="14">
+            <el-card shadow="hover" body-style="height:750px">
+                <div slot="header">
+                    <span style="font-size: 14px;">{{job.jobName}}</span>
+                    <el-button @click="addCollection" type="warning" size="mini" icon="el-icon-star-off" circle style="float: right"></el-button>
+                </div>
+                <div>
+                    <div>
+                        <span style="font-size: 14px;">任职要求</span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 12px;">{{job.qualifications}}</span>
+                    </div>
+                    <div style="margin-top: 20px">
+                        <span style="font-size: 14px;">工作内容</span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 12px;">{{job.jobContent}}</span>
+                    </div>
+                    <div style="margin-top: 20px">
+                        <span style="font-size: 14px;">薪资待遇</span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 12px;">{{job.salary}}</span>
+                    </div>
+                    <div style="margin-top: 20px">
+                        <span style="font-size: 14px;">工作地点</span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 12px;">{{job.place}}</span>
+                    </div>
+                    <div style="margin-top: 20px">
+                        <span style="font-size: 14px;">学历要求</span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 12px;">{{job.education}}</span>
+                    </div>
+                    <div style="margin-bottom: 20px">
+                        <div style="float: left">
+                            <div style="margin-top: 20px">
+                                <span style="font-size: 14px;">发布时间</span>
+                            </div>
+                            <div style="margin-top: 10px">
+                                <span style="font-size: 12px;">{{job.sendTime}}</span>
+                            </div>
+                        </div>
+                        <div style="float: right">
+                            <el-button type="primary" @click="send">投递简历</el-button>
+                            <el-dialog title="投递简历" :visible.sync="dialogFormSend" width="50%" show-close destroy-on-close="true">
+                                <el-form :model="jobResume.resumeid" style="align-content: center">
+                                    <el-form-item label="选择简历">
+                                        <el-select v-model="jobResume.resumeid" placeholder="请选择">
+                                            <el-option
+                                                    v-for="item in resumeList"
+                                                    :key="item.id"
+                                                    :label="item.resumeName"
+                                                    :value="item.id">
+                                            </el-option>
+                                        </el-select>
+                                    </el-form-item>
+                                </el-form>
+                                <div slot="footer" class="dialog-footer">
+                                    <el-button type="primary" @click="sendResume">投递</el-button>
+                                </div>
+                            </el-dialog>
+
+                        </div>
+                    </div>
+
+                </div>
+            </el-card>
+        </el-col>
+        <el-col :span="10">
+            <el-card shadow="hover" body-style="height:750px">
+                <div>
+                    <span>
+                        <el-link href="/page/com">
+                            <img  :src="company.portrait" height="50px" width="50px" style="border-radius:5px;">
+                        </el-link>
+                        <el-link href="/page/com">
+                            {{company.companyName}}
+                        </el-link>
+                    </span>
+                </div>
+                <div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            公司简介：{{company.infomation}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            信用代码：{{company.creditCode}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            法人代表：{{company.legalPerson}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            公司地址：{{company.address}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            性质：{{company.nature}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            规模：{{company.scale}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            电话：{{company.tellCall}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            手机：{{company.phone}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            邮箱：{{company.email}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            官方链接：
+                            <el-link type="primary" :href="company.homeLink" target="_blank">{{company.homeLink}}</el-link>
+                        </span>
+                    </div>
+                </div>
+            </el-card>
+        </el-col>
+    </el-row>
+    <script>
+        new Vue({
+            el:"#app",
+            data:{
+                userInfo: JSON.parse(sessionStorage.getItem("userInfo")),
+                job:'',
+                company:'',
+                search:JSON.parse(sessionStorage.getItem("search")),
+                dialogFormSend:false,
+                jobResume:{
+                    resumeid:'',
+                    jobid:'',
+                    studentid:'',
+                    companyid:''
+                },
+                resumeList:[]
+            },
+            mounted:function(){
+                this.createcode();//需要触发的函数
+            },
+            methods:{
+                createcode(){
+                    this.search=JSON.parse(sessionStorage.getItem("search"));
+                    let id = '';
+                    if (this.search.jobId==undefined){
+                        id=this.search.id;
+                    }else{
+                        id=this.search.jobId;
+                    }
+                    axios.post('/job/showById/'+id).then(response=>{
+                        if (response.data.code==200){
+                            this.job=response.data.data;
+                        }else{
+                            this.$message.error("获取岗位信息失败");
+                        }
+                    });
+                    if (this.search.companyId==undefined){
+                        id=this.userInfo.id;
+                    }else{
+                        id=this.search.companyId;
+                    }
+                    axios.post('/company/showCompanyById/'+id).then(response=>{
+                        if (response.data.code==200){
+                            this.company=response.data.data;
+                        }else{
+                            this.$message.error("获取岗位信息失败");
+                        }
+                    })
+                },
+                send(){
+                    if(this.userInfo!=null||this.userInfo==''){
+                        if (this.userInfo.sex===undefined){
+                            this.$message.error("公司不能投递简历");
+                        }else {
+                            this.dialogFormSend = true;
+                            axios.post("/resume/listByStudentId/"+this.userInfo.id).then((response)=>{
+                                if (response.data.code==200){
+                                    this.resumeList = response.data.data;
+                                }else{
+                                    this.$message.error("获取简历失败");
+                                }
+                            })
+                        }
+                    }else{
+                        this.$message.error("请先登录");
+                    }
+                },
+                sendResume(){
+                    console.log(this.job)
+                    this.jobResume.jobid=this.job.id;
+                    this.jobResume.companyid=this.job.companyId;
+                    this.jobResume.studentid=this.userInfo.id;
+                    axios.post("/job-resume/add",this.jobResume).then((response)=>{
+                        if (response.data.code==200){
+                            this.$message({message: response.data.msg, type: 'success'});
+                        }else{
+                            this.$message.error(response.data.msg);
+                        }
+                        this.dialogFormSend = false;
+                    })
+                },
+                addCollection(){
+                    axios.post("/collection/add/"+this.job.id).then((response)=>{
+                        if (response.data.code==200){
+                            this.$message({message: response.data.msg, type: 'success'});
+                        }else{
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+                }
+            }
+        })
+    </script>
+</div>
+</body>
+</html>

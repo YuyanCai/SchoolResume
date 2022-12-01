@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>student_send</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/blueimp-md5/2.16.0/js/md5.js"></script>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="20">
+        <el-col :span="8">
+            <el-card shadow="hover" body-style="height:750px">
+                <div>
+                    <img  :src="company.portrait" height="40px" width="40px" style="border-radius:5px;">
+                    {{company.companyName}}
+                </div>
+                <div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            公司简介：{{company.infomation}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 15px">
+                        <span style="font-size: 10px">
+                            信用代码：{{company.creditCode}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            法人代表：{{company.legalPerson}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            公司地址：{{company.address}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            性质：{{company.nature}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            规模：{{company.scale}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            电话：{{company.tellCall}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            手机：{{company.phone}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            邮箱：{{company.email}}
+                        </span>
+                    </div>
+                    <div style="margin-top: 10px">
+                        <span style="font-size: 14px">
+                            官方链接：
+                            <el-link type="primary" :href="company.homeLink" target="_blank">{{company.homeLink}}</el-link>
+                        </span>
+                    </div>
+                </div>
+            </el-card>
+        </el-col>
+        <el-col :span="16">
+            <el-card shadow="hover" body-style="height:750px">
+                <div slot="header">
+                    <span style="font-size: 14px;">正在招聘的职位</span>
+                </div>
+                <div>
+                    <el-input placeholder="请输入岗位名称包含的词语" v-model="find" @change="createcode" clearable>
+                        <el-button slot="append" icon="el-icon-search" @click="createcode"></el-button>
+                    </el-input>
+                    <el-table
+                            size="medium"
+                            :data="jobList"
+                            style="width: 100%">
+                        <el-table-column
+                                prop="jobName"
+                                label="岗位名称"
+                                width="200">
+                            <template slot-scope="scope">
+                                <el-button type="text" @click.native.prevent="showJob(scope.row)">{{scope.row.jobName}}</el-button>
+                            </template>
+                        </el-table-column>
+                        <el-table-column
+                                prop="salary"
+                                label="薪资待遇">
+                        </el-table-column>
+                        <el-table-column
+                                prop="number"
+                                label="招聘人数">
+                        </el-table-column>
+                        <el-table-column
+                                prop="place"
+                                label="工作地点">
+                        </el-table-column>
+                        <el-table-column
+                                prop="education"
+                                label="学历要求">
+                        </el-table-column>
+                    </el-table>
+                    <div tyle="text-align: center;">
+                        <el-pagination
+                                style="text-align: center;"
+                                background
+                                layout="total,prev, pager, next,jumper"
+                                :total="total"
+                                page-size="7"
+                                @prev-click="prevClick"
+                                @next-click="nextClick"
+                                @current-change="currentChange" >
+                        </el-pagination>
+                    </div>
+                </div>
+            </el-card>
+        </el-col>
+    </el-row>
+    <script>
+        new Vue({
+            el:"#app",
+            data:{
+                userInfo: JSON.parse(sessionStorage.getItem("userInfo")),
+                job:'',
+                company:'',
+                search:JSON.parse(sessionStorage.getItem("search")),
+                crrPage:1,
+                jobList:[],
+                total:1,
+                find:''
+            },
+            mounted:function(){
+                this.createcode();//需要触发的函数
+            },
+            methods:{
+                createcode(){
+                    this.search=JSON.parse(sessionStorage.getItem("search"));
+                    let find_JobName= '';
+                    let companyId= 0;
+                    if(this.find==''||this.find==null){
+                        find_JobName='null';
+                    }else{
+                        find_JobName=this.find;
+                    }
+                    if(this.search.companyId==''||this.search.companyId==undefined){
+                        companyId=this.search.id;
+                    }else{
+                        companyId=this.search.companyId;
+                    }
+                    axios.post('/job/find/'+companyId+'/'+find_JobName+'/'+1+'/正在招聘').then(response=>{
+                        if (response.data.code==200){
+                            this.jobList=response.data.data.records;
+                            this.$message({
+                                message: '查询成功',
+                                type: 'success'
+                            });
+                            this.total=response.data.data.total;
+                        }else{
+                            this.$message.error(response.data.msg);
+                        }
+                    })
+
+                    axios.post('/company/showCompanyById/'+companyId).then(response=>{
+                        if (response.data.code==200){
+                            this.company=response.data.data;
+                        }else{
+                            this.$message.error("获取岗位信息失败");
+                        }
+                    })
+                },
+                prevClick(page){
+                    this.crrPage=page;
+                    this.$options.methods.page(_this);
+                },
+                nextClick(page){
+                    this.crrPage=page;
+                    this.$options.methods.page(_this);
+                },
+                currentChange(page){
+                    this.crrPage=page;
+                    this.$options.methods.page(this);
+                },
+                page(_this){
+                    let find_JobName= '';
+                    if(_this.find==''||_this.find==null){
+                        find_JobName='null';
+                    }else{
+                        find_JobName=_this.find;
+                    }
+                    let companyId= 0;
+                    if(_this.search.companyId==''||_this.search.companyId==undefined){
+                        companyId=_this.search.id;
+                    }else{
+                        companyId=_this.search.companyId;
+                    }
+                    axios.post('/job/find/'+companyId+'/'+find_JobName+'/'+_this.crrPage+'/正在招聘').then(response=>{
+                        if (response.data.code==200){
+                            _this.jobList=response.data.data.records;
+                            _this.total=response.data.data.total;
+                        }else{
+                            _this.$message.error(response.data.msg);
+                        }
+                    })
+                },
+                showJob(row){
+                    sessionStorage.setItem("search", JSON.stringify(row));
+                    location.href='/page/job';
+                },
+            }
+        })
+    </script>
+</div>
+</body>
+</html>

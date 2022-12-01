@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>admin_data</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <!-- 引入 echarts.js -->
+    <script src="https://cdn.staticfile.org/echarts/4.3.0/echarts.min.js"></script>
+</head>
+<body>
+<div id="app">
+    <el-row :gutter="10" style="width: 100%">
+        <el-col :span="5">
+            <el-card class="box-card">
+                <div slot="header" class="clearfix">
+                    <i class="el-icon-office-building"></i>
+                    <span>公司数</span>
+                </div>
+                <div class="text item">
+                    {{company}}个
+                </div>
+            </el-card>
+        </el-col>
+        <el-col :span="5">
+            <el-card class="box-card">
+                <div slot="header" class="clearfix">
+                    <i class="el-icon-c-scale-to-original"></i>
+                    <span>岗位数</span>
+                </div>
+                <div class="text item">
+                    {{job}}个
+                </div>
+            </el-card>
+        </el-col>
+        <el-col :span="4">
+            <el-card class="box-card">
+                <div slot="header" class="clearfix">
+                    <i class="el-icon-finished"></i>
+                    <span>投递数</span>
+                </div>
+                <div class="text item">
+                    {{jobResume}}次
+                </div>
+            </el-card>
+        </el-col>
+        <el-col :span="5">
+            <el-card class="box-card">
+                <div slot="header" class="clearfix">
+                    <i class="el-icon-document-copy"></i>
+                    <span>简历数</span>
+                </div>
+                <div class="text item">
+                    {{resume}}份
+                </div>
+            </el-card>
+        </el-col>
+        <el-col :span="5">
+            <el-card class="box-card">
+                <div slot="header" class="clearfix">
+                    <i class="el-icon-user"></i>
+                    <span>学生数</span>
+                </div>
+                <div class="text item">
+                    {{student}}个
+                </div>
+            </el-card>
+        </el-col>
+    </el-row>
+    <el-divider></el-divider>
+    <div id="main" style="height:400px;"></div>
+    <script>
+        new Vue({
+            el:"#app",
+            data:{
+                company:0,
+                job:0,
+                jobResume: 0,
+                resume:0,
+                student:0
+            },
+            mounted:function(){
+                let main = echarts.init(document.getElementById('main'));
+                axios.post("/job-resume/allDataLine").then((response)=>{
+                    // 使用刚指定的配置项和数据显示图表。
+                    main.setOption({
+                        title: {
+                            text: '最近10日投递次数'
+                        },
+                        tooltip: {trigger: 'item'},
+                        legend: {
+                            data:['投递次数']
+                        },
+                        xAxis: {
+                            data: response.data.data.x
+                        },
+                        yAxis: {},
+                        series: [
+                            {
+                                name: '投递次数',
+                                type: 'line',
+                                data: response.data.data.y
+                            }
+                        ]
+                    });
+                });
+                axios.post("/job-resume/count").then((response)=>{
+                    let list =response.data.data;
+                    this.company=list[0];
+                    this.job=list[1];
+                    this.jobResume=list[2];
+                    this.resume=list[3];
+                    this.student=list[4];
+                });
+            },
+            methods:{
+            }
+        });
+    </script>
+</div>
+</body>
+</html>

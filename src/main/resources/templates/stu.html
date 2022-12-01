@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>student_info</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdn.bootcdn.net/ajax/libs/blueimp-md5/2.16.0/js/md5.js"></script>
+    <!-- 引入oss在线资源 -->
+    <script src="https://gosspublic.alicdn.com/aliyun-oss-sdk-6.13.2.min.js"></script>
+    <!-- 引入 echarts.js -->
+    <script src="https://cdn.staticfile.org/echarts/4.3.0/echarts.min.js"></script>
+    <!--<script src="https://cdn.jsdelivr.net/npm/echarts@5.1.0/dist/echarts.min.js"></script>-->
+</head>
+<body>
+<div id="app">
+    <table width=100% border="0" cellspacing="20">
+        <tr>
+            <td style="font-size: 13px; text-align: right;" width="10%">姓名：</td>
+            <td style="font-size: 12px; text-align: left" width="40%">{{student.studentName}}</td>
+            <td style="font-size: 13px; text-align: right"  width="10%">邮件：</td>
+            <td style="font-size: 12px; text-align: left"  width="40%">{{student.email}}</td>
+        </tr>
+        <tr>
+            <td style="font-size: 13px; text-align: right;" width="10%">高校：</td>
+            <td style="font-size: 12px; text-align: left" width="40%">{{student.college}}</td>
+            <td style="font-size: 13px; text-align: right"  width="10%">专业：</td>
+            <td style="font-size: 12px; text-align: left"  width="40%">{{student.major}}</td>
+        </tr>
+        <tr>
+            <td style="font-size: 13px; text-align: right;" width="10%">手机：</td>
+            <td style="font-size: 12px; text-align: left" width="40%">{{student.phone}}</td>
+            <td style="font-size: 13px; text-align: right"  width="10%">性别：</td>
+            <td style="font-size: 12px; text-align: left"  width="40%">{{student.sex}}</td>
+        </tr>
+        <tr>
+            <td style="font-size: 13px; text-align: right;" width="10%">生日：</td>
+            <td style="font-size: 12px; text-align: left" width="40%">{{student.birthday}}</td>
+            <td style="font-size: 13px; text-align: right"  width="10%">学历：</td>
+            <td style="font-size: 12px; text-align: left"  width="40%">{{student.education}}</td>
+        </tr>
+        <tr>
+            <td style="font-size: 13px; text-align: right;" width="10%">学制：</td>
+            <td style="font-size: 12px; text-align: left" width="40%">{{student.lengthOfSchooling}}</td>
+            <td style="font-size: 13px; text-align: right"  width="10%">外语：</td>
+            <td style="font-size: 12px; text-align: left"  width="40%">{{student.foreignLanguages}}</td>
+        </tr>
+    </table>
+    <el-divider></el-divider>
+    <el-card class="box-card">
+        <div slot="header" >
+            <span>简历列表</span>
+        </div>
+        <div class="text item">
+            <el-table
+                    :data="resumeList"
+                    style="width: 100%">
+                <el-table-column
+                        prop="resumeName"
+                        label="简历名称">
+                </el-table-column>
+                <!--<el-table-column
+                        prop="intention"
+                        label="求职意向"
+                        width="180">
+                </el-table-column>-->
+                <el-table-column
+                        prop="updateTime"
+                        label="更新时间">
+                </el-table-column>
+                <el-table-column
+                        label="附件链接">
+                    <template slot-scope="scope">
+                        <el-link :href="scope.row.attachment" type="success" target="_blank">查看</el-link>
+                    </template>
+                </el-table-column>
+                <el-table-column
+                        prop="status"
+                        label="标记">
+                </el-table-column>
+                <el-table-column
+                        label="操作">
+                    <template slot-scope="scope">
+                        <el-tooltip content="系统发送邀约邮件给学生" placement="right">
+                            <el-button
+                                    v-if="scope.row.status=='未邀请'"
+                                    @click.native.prevent="invitation(scope.row)"
+                                    type="text">
+                                邀请投递
+                            </el-button>
+                            <el-button
+                                    v-else
+                                    disabled
+                                    type="text">
+                                邀请投递
+                            </el-button>
+                        </el-tooltip>
+                    </template>
+                </el-table-column>
+            </el-table>
+        </div>
+    </el-card>
+    <script>
+        new Vue({
+            el:"#app",
+            data:{
+                search: JSON.parse(sessionStorage.getItem("search")),
+                student:'',
+                resumeList:[],
+                sendMsg:{
+                    email:'',
+                    title:'',
+                    content:''
+                },
+
+            },
+            mounted:function(){
+                this.createcode();//需要触发的函数
+            },
+            methods:{
+                createcode(){
+                    axios.post("/invitation/listByStudentIdTJ/"+this.search.id+'/'+this.search.phone).then((response)=>{
+                        if (response.data.code==200){
+                            this.resumeList = response.data.data;
+                        }
+                    });
+                    axios.post("/student/get/"+this.search.id).then((response)=>{
+                        this.student=response.data.data;
+                    });
+                },
+                invitation(row){
+                    console.log(this.search)
+                    this.sendMsg.email=this.search.email;
+                    this.sendMsg.title='邀请通知';
+                    this.sendMsg.content='[公司]邀请你用['+row.resumeName+']投递['+this.search.jobName+']。';
+                    axios.post('/email/reply',this.sendMsg).then(response=> {
+                        if (response.data.code == 200) {
+                            axios.post('/invitation/add/'+this.search.phone+'/'+row.id+'/'+this.search.id).then(response=> {
+                                if (response.data.code == 200) {
+                                    this.$message({
+                                        message: response.data.msg,
+                                        type: 'success'
+                                    });
+                                    axios.post("/invitation/listByStudentIdTJ/"+this.search.id+'/'+this.search.email).then((response)=>{
+                                        if (response.data.code==200){
+                                            this.resumeList = response.data.data;
+                                        }
+                                    });
+                                }else{
+                                    this.$message.error(response.data.msg);
+                                }
+                            });
+                        } else {
+                            this.$message.error(response.data.msg);
+                        }
+                    });
+                }
+            }
+        })
+    </script>
+</div>
+</body>
+</html>

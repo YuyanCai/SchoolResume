@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>admin_company</title>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-ui/lib/theme-chalk/index.css">
+    <!-- import Vue before Element -->
+    <script src="https://cdn.jsdelivr.net/npm/vue@2/dist/vue.js"></script>
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-ui/lib/index.js"></script>
+    <!-- import axios -->
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+
+</head>
+<body>
+<div id="app">
+    <el-input placeholder="请输入内容" v-model="companyName" class="input-with-select">
+        <el-select v-model="checkStatus" slot="prepend" placeholder="请选择审核状态" style="width: 200px">
+            <el-option value="不限"></el-option>
+            <el-option value="未完善"></el-option>
+            <el-option value="待审核"></el-option>
+            <el-option value="已通过"></el-option>
+            <el-option value="已退回"></el-option>
+            <el-option value="已禁用"></el-option>
+        </el-select>
+        <el-button slot="append" icon="el-icon-search"  @click="createcode"></el-button>
+    </el-input>
+    <el-table
+            :data="companyList"
+            style="width: 100%">
+        <el-table-column
+                prop="companyName"
+                label="公司名称"
+                width="300">
+            <template slot-scope="scope">
+                <el-row>
+                    <el-col :span="5">
+                        <img  :src="scope.row.portrait" height="50px" width="50px" style="border-radius:5px;">
+                    </el-col>
+                    <el-col :span="19" style="margin-top: 10px">
+                        <el-button type="text" @click.native.prevent="showJCom(scope.row)">{{scope.row.companyName}}</el-button>
+                    </el-col>
+                </el-row>
+            </template>
+        </el-table-column>
+        <el-table-column
+                prop="legalPerson"
+                label="法人">
+        </el-table-column>
+        <el-table-column
+                prop="creditCode"
+                label="信用代码"
+                width="200">
+        </el-table-column>
+        <el-table-column
+                prop="businessLicense"
+                label="营业执照">
+            <template slot-scope="scope">
+                <el-link v-if="scope.row.businessLicense" :href="scope.row.businessLicense" type="success" target="_blank">查看</el-link>
+                <span v-else>未上传</span>
+            </template>
+        </el-table-column>
+        <!--<el-table-column
+                prop="email"
+                label="邮箱"
+                width="200">
+        </el-table-column>
+        <el-table-column
+                prop="phone"
+                label="手机"
+                width="150">
+        </el-table-column>
+        <el-table-column
+                prop="tellCall"
+                label="电话"
+                width="150">
+        </el-table-column>-->
+        <el-table-column
+                prop="checkStatus"
+                label="审核状态">
+        </el-table-column>
+        <el-table-column
+                label="操作">
+            <template slot-scope="scope">
+                <el-button
+                        @click.native.prevent="updateRow(scope.row)"
+                        type="text">
+                    审核
+                </el-button>
+            </template>
+        </el-table-column>
+    </el-table>
+    <div style="text-align: center;">
+        <el-pagination
+                background
+                layout="total,prev, pager, next,jumper"
+                :total="total"
+                page-size="5"
+                @prev-click="prevClick"
+                @next-click="nextClick"
+                @current-change="currentChange" >
+        </el-pagination>
+    </div>
+    <el-dialog title="审核" :visible.sync="dialogFormUpdateStatus" width="30%" show-close destroy-on-close="true">
+        <el-form  style="align-content: center">
+            <div style="margin-bottom: 20px">{{company.companyName}}</div>
+            <el-form-item label="审核结果">
+                <el-select v-model="company.checkStatus"placeholder="请选择审核状态" style="width: 200px">
+                    <el-option value="已通过"></el-option>
+                    <el-option value="已退回"></el-option>
+                    <el-option value="已禁用"></el-option>
+                </el-select>
+            </el-form-item>
+            <el-form-item label="审核意见">
+                <el-input v-model="msg" style="width: 200px"  maxlength="15" show-word-limit></el-input>
+            </el-form-item>
+        </el-form>
+        <div slot="footer" class="dialog-footer">
+            <el-button type="primary" @click="updateStatus">确定</el-button>
+        </div>
+    </el-dialog>
+
+    <script>
+        new Vue({
+            el:"#app",
+            data:{
+                company:{
+                    id:0,
+                    companyName: '',
+                    checkStatus:'',
+                    email:''
+                },
+                companyList:[],
+                companyName:'',
+                checkStatus:'',
+                total:1,
+                page:1,
+                dialogFormUpdateStatus:false,
+                msg:''
+            },
+            mounted:function(){
+                this.createcode();//需要触发的函数
+            },
+            methods:{
+                createcode(){
+                    let find_companyName='';
+                    let find_checkStatus='';
+                    if(this.companyName==''){find_companyName='null'}else{find_companyName=this.companyName}
+                    if(this.checkStatus==''||this.checkStatus=='不限'){find_checkStatus='null'}else{find_checkStatus=this.checkStatus}
+                    axios.post("/company/manageCompany/"+1+'/'+find_checkStatus+'/'+find_companyName).then(response=>{
+                        if (response.data.code==200){
+                            this.$message({
+                                message: response.data.msg,
+                                type: 'success'
+                            });
+                            this.companyList=response.data.data.records;
+                            this.total=response.data.data.total;
+                        }else{
+                            this.$message.error(response.data.msg);
+                        }
+                    });
+                },
+                prevClick(page){
+                    this.page=page;
+                    this.$options.methods.page(this);
+                },
+                nextClick(page){
+                    this.page=page;
+                    this.$options.methods.page(this);
+                },
+                currentChange(page){
+                    this.page=page;
+                    _this=this;
+                    this.$options.methods.page(_this);
+                },
+                page(_this){
+                    let find_companyName='';
+                    let find_checkStatus='';
+                    if(_this.companyName==''){find_companyName='null'}else{find_companyName=_this.companyName}
+                    if(_this.checkStatus==''||_this.checkStatus=='不限'){find_checkStatus='null'}else{find_checkStatus=_this.checkStatus}
+                    axios.post("/company/manageCompany/"+_this.page+'/'+find_checkStatus+'/'+find_companyName).then(response=>{
+                        if (response.data.code==200){
+                            _this.$message({
+                                message: response.data.msg,
+                                type: 'success'
+                            });
+                            _this.companyList=response.data.data.records;
+                            _this.total=response.data.data.total;
+                        }else{
+                            _this.$message.error(response.data.msg);
+                        }
+                    });
+                },
+                updateRow(row){
+                    this.company=row;
+                    this.dialogFormUpdateStatus=true;
+                },
+                updateStatus(){
+                    if (this.msg!=''){this.company.checkStatus=this.company.checkStatus+'('+this.msg+')'}
+                    axios.post("/company/updateByAdmin",this.company).then((response)=>{
+                        if (response.data.code==200){
+                            this.$message({
+                                message: response.data.msg,
+                                type: 'success'
+                            });
+                            this.dialogFormUpdateStatus=false;
+                        }else{
+                            this.$message.error(response.data.msg);
+                        }
+                    });
+                },
+                showJCom(row){
+                    sessionStorage.setItem("search", JSON.stringify(row));
+                    location.href='/page/com';
+                }
+            }
+        });
+    </script>
+</div>
+</body>
+</html>
